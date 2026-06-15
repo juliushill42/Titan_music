@@ -1,0 +1,34 @@
+services:
+  localai:
+    image: localai/localai:latest
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  sidecar:
+    build:
+      context: ./sidecar
+    environment:
+      - SIDE_CAR_PORT=9001
+      - LOCALAI_BASE_URL=http://localai:8080
+      - CONTROL_PLANE_URL=http://control-plane:9000
+    ports:
+      - "9001:9001"
+    depends_on:
+      - localai
+    restart: unless-stopped
+
+  control-plane:
+    build:
+      context: .
+      dockerfile: infra/docker/control-plane.Dockerfile
+    environment:
+      - CONTROL_PLANE_PORT=9000
+      - SIDE_CAR_URL=http://sidecar:9001
+      - LOCALAI_BASE_URL=http://localai:8080
+    ports:
+      - "9000:9000"
+    depends_on:
+      - localai
+      - sidecar
+    restart: unless-stopped
